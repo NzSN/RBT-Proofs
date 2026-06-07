@@ -96,3 +96,54 @@ def append (t1 t2 : RBTree α) : RBTree α :=
   | .node .red a x b, .node .black c y d =>
     .node .red a x (append b (.node .black c y d))
 termination_by sizeOf t1 + sizeOf t2
+
+/-- Internal delete. Returns `(tree, deficit)` where `deficit` means the result
+    is one black shorter than the input. -/
+def del (t : RBTree α) (x : α) [Ord α] : RBTree α × Bool :=
+  match t with
+  | nil => (nil, false)
+  | .node color l y r =>
+    match compare x y with
+    | .lt =>
+      let (l', d) := del l x
+      if d then
+        let t' := balLeft l' y r
+        (t', match t' with | .node .black .. => true | _ => false)
+      else
+        (.node color l' y r, false)
+    | .eq => (append l r, color == .black)
+    | .gt =>
+      let (r', d) := del r x
+      if d then
+        let t' := balRight l y r'
+        (t', match t' with | .node .black .. => true | _ => false)
+      else
+        (.node color l y r', false)
+
+/-- Public delete. Removes `x` from `t` and ensures the root is black. -/
+def delete (t : RBTree α) (x : α) [Ord α] : RBTree α :=
+  let (t', _) := del t x
+  match t' with
+  | .node _ l y r => .node .black l y r
+  | nil => nil
+
+end RBTree
+
+#eval
+  let t : RBTree Nat := RBTree.nil
+  let t := t.insert 5
+  let t := t.insert 3
+  let t := t.insert 7
+  let t := t.insert 2
+  let t := t.insert 4
+  let t := t.insert 6
+  let t := t.insert 8
+  t
+
+#eval
+  let t : RBTree Nat := RBTree.nil
+  let t := t.insert 5
+  let t := t.insert 3
+  let t := t.insert 7
+  let t := t.delete 3
+  t

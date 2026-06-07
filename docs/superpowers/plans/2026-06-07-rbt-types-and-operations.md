@@ -1,3 +1,25 @@
+# Red-Black Tree Types and Operations — Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Define Red-Black Tree inductive types plus `insert`/`delete` with balancing in `RBTProofs/Basic.lean`.
+
+**Architecture:** Single file, sequential tasks (each builds on the last). Classic Okasaki-style RBT with `Color` and `RBTree α` inductives, then insertion (balance + ins + insert), then deletion helpers (balLeft + balRight + append), then deletion (del + delete).
+
+**Tech Stack:** Lean 4 (v4.30.0), mathlib4 (v4.30.0), `Ord α` from Init
+
+---
+
+### Task 1: Define Color and RBTree types
+
+**Files:**
+- Modify: `RBTProofs/Basic.lean`
+
+- [ ] **Step 1: Replace Basic.lean with types**
+
+Replace the entire content of `RBTProofs/Basic.lean`:
+
+```lean
 /-!
 # Basic definitions for Red-Black Trees
 
@@ -15,9 +37,37 @@ inductive Color where
 inductive RBTree (α : Type u) where
   | nil
   | node (color : Color) (left : RBTree α) (val : α) (right : RBTree α)
-  deriving Repr, DecidableEq
-namespace RBTree
+  deriving Repr
 
+namespace RBTree
+```
+
+- [ ] **Step 2: Verify compilation**
+
+Run: `lake build`
+Expected: Build succeeds with no errors.
+
+Note: First `lake build` will download mathlib4 — this may take several minutes.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add RBTProofs/Basic.lean
+git commit -m "feat: define Color and RBTree inductive types"
+```
+
+---
+
+### Task 2: Implement insertion (balance, ins, insert)
+
+**Files:**
+- Modify: `RBTProofs/Basic.lean`
+
+- [ ] **Step 1: Append insertion functions to Basic.lean**
+
+Append the following code to `RBTProofs/Basic.lean` (after the `namespace RBTree` line):
+
+```lean
 /-- Rebalance after insertion. Handles the 4 red-red violation cases:
     LL, LR, RL, RR. Returns a tree with root colored red. -/
 def balance : Color → RBTree α → α → RBTree α → RBTree α
@@ -46,7 +96,32 @@ def insert (t : RBTree α) (x : α) [Ord α] : RBTree α :=
   match ins t x with
   | .node _ l y r => .node .black l y r
   | nil => nil
+```
 
+- [ ] **Step 2: Verify compilation**
+
+Run: `lake build`
+Expected: Build succeeds with no errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add RBTProofs/Basic.lean
+git commit -m "feat: implement RBT insertion with balance"
+```
+
+---
+
+### Task 3: Implement deletion helpers (balLeft, balRight, append)
+
+**Files:**
+- Modify: `RBTProofs/Basic.lean`
+
+- [ ] **Step 1: Append deletion helpers to Basic.lean**
+
+Append the following code to `RBTProofs/Basic.lean` (after the `insert` function, before `end RBTree`):
+
+```lean
 /-- Rebalance when left subtree is one black shorter than right.
     Returns a tree: red root = deficit resolved, black root = deficit propagated. -/
 def balLeft (l : RBTree α) (x : α) (r : RBTree α) : RBTree α :=
@@ -60,7 +135,6 @@ def balLeft (l : RBTree α) (x : α) (r : RBTree α) : RBTree α :=
   | a, z, .node .red (.node .black b y c) w (.node .black d v e) =>
     .node .red (.node .black a z b) y (balLeft c w (.node .red d v e))
   | a, z, b => .node .black a z b
-termination_by sizeOf l + sizeOf r
 
 /-- Rebalance when right subtree is one black shorter than left.
     Returns a tree: red root = deficit resolved, black root = deficit propagated. -/
@@ -75,7 +149,6 @@ def balRight (l : RBTree α) (x : α) (r : RBTree α) : RBTree α :=
   | .node .red (.node .black a x' b) w (.node .black c y d), v, e =>
     .node .red (balRight (.node .red a x' b) w c) y (.node .black d v e)
   | a, z, b => .node .black a z b
-termination_by sizeOf l + sizeOf r
 
 /-- Concatenate two trees where every value in `t1` < every value in `t2`. -/
 def append (t1 t2 : RBTree α) : RBTree α :=
@@ -94,8 +167,32 @@ def append (t1 t2 : RBTree α) : RBTree α :=
     .node .red (append (.node .black a x b) c) y d
   | .node .red a x b, .node .black c y d =>
     .node .red a x (append b (.node .black c y d))
-termination_by sizeOf t1 + sizeOf t2
+```
 
+- [ ] **Step 2: Verify compilation**
+
+Run: `lake build`
+Expected: Build succeeds with no errors.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add RBTProofs/Basic.lean
+git commit -m "feat: implement RBT deletion helpers (balLeft, balRight, append)"
+```
+
+---
+
+### Task 4: Implement deletion (del, delete)
+
+**Files:**
+- Modify: `RBTProofs/Basic.lean`
+
+- [ ] **Step 1: Append deletion functions to Basic.lean**
+
+Append the following code to `RBTProofs/Basic.lean` (after `append`, before `end RBTree`):
+
+```lean
 /-- Internal delete. Returns `(tree, deficit)` where `deficit` means the result
     is one black shorter than the input. -/
 def del (t : RBTree α) (x : α) [Ord α] : RBTree α × Bool :=
@@ -146,3 +243,21 @@ end RBTree
   let t := t.insert 7
   let t := t.delete 3
   t
+```
+
+- [ ] **Step 2: Verify compilation**
+
+Run: `lake build`
+Expected: Build succeeds with no errors.
+
+- [ ] **Step 3: Run #eval blocks**
+
+Run: `lake env lean --run RBTProofs/Basic.lean`
+Expected: Outputs two tree structures with no runtime errors.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add RBTProofs/Basic.lean
+git commit -m "feat: implement RBT deletion with #eval sanity checks"
+```

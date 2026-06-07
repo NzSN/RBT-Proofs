@@ -1,1 +1,11 @@
 /.agent-shell/
+/.lake/
+/lake-packages/
+/build/
+*.olean
+*.ilean
+*.trace
+.lake-packages/
+*.log
+*.cache
+.envrc

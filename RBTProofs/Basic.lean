@@ -47,3 +47,52 @@ def insert (t : RBTree α) (x : α) [Ord α] : RBTree α :=
   match ins t x with
   | .node _ l y r => .node .black l y r
   | nil => nil
+
+/-- Rebalance when left subtree is one black shorter than right.
+    Returns a tree: red root = deficit resolved, black root = deficit propagated. -/
+def balLeft (l : RBTree α) (x : α) (r : RBTree α) : RBTree α :=
+  match l, x, r with
+  | .node .red (.node .red a x' b) y c, z, d =>
+    .node .red (.node .black a x' b) y (.node .black c z d)
+  | .node .red a x' (.node .red b y c), z, d =>
+    .node .red (.node .black a x' b) y (.node .black c z d)
+  | a, z, .node .black b y (.node .red c w d) =>
+    .node .black (balLeft a z b) y (.node .red c w d)
+  | a, z, .node .red (.node .black b y c) w (.node .black d v e) =>
+    .node .red (.node .black a z b) y (balLeft c w (.node .red d v e))
+  | a, z, b => .node .black a z b
+termination_by sizeOf l + sizeOf r
+
+/-- Rebalance when right subtree is one black shorter than left.
+    Returns a tree: red root = deficit resolved, black root = deficit propagated. -/
+def balRight (l : RBTree α) (x : α) (r : RBTree α) : RBTree α :=
+  match l, x, r with
+  | a, z, .node .red (.node .red b y c) w d =>
+    .node .red (.node .black a z b) y (.node .black c w d)
+  | a, z, .node .red b y (.node .red c w d) =>
+    .node .red (.node .black a z b) y (.node .black c w d)
+  | .node .red a x' b, w, .node .black c z d =>
+    .node .black (.node .red a x' b) w (balRight c z d)
+  | .node .red (.node .black a x' b) w (.node .black c y d), v, e =>
+    .node .red (balRight (.node .red a x' b) w c) y (.node .black d v e)
+  | a, z, b => .node .black a z b
+termination_by sizeOf l + sizeOf r
+
+/-- Concatenate two trees where every value in `t1` < every value in `t2`. -/
+def append (t1 t2 : RBTree α) : RBTree α :=
+  match t1, t2 with
+  | nil, _ => t2
+  | _, nil => t1
+  | .node .red a x b, .node .red c y d =>
+    match append b c with
+    | .node .red b' z c' => .node .red (.node .red a x b') z (.node .red c' y d)
+    | bc => .node .red a x (.node .red bc y d)
+  | .node .black a x b, .node .black c y d =>
+    match append b c with
+    | .node .red b' z c' => .node .red (.node .black a x b') z (.node .black c' y d)
+    | bc => balLeft a x (.node .black bc y d)
+  | .node .black a x b, .node .red c y d =>
+    .node .red (append (.node .black a x b) c) y d
+  | .node .red a x b, .node .black c y d =>
+    .node .red a x (append b (.node .black c y d))
+termination_by sizeOf t1 + sizeOf t2

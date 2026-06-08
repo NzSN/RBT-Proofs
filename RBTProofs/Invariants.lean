@@ -107,7 +107,6 @@ theorem bst_balance [LinearOrder α] (c : Color) (l : RBTree α) (v : α) (r : R
       · exact hyz
       · exact hlc₀_val w hwc
       · exact h_y_lt_d w hwd
-    -- c = .black, l = .node .red (.node .red a x b) y c₀, v = z, r = d  (definitionally)
     dsimp [balance]; exact ⟨hleft, hright, horderL, horderR⟩
 
   | .black, .node .red a x (.node .red b y c₀), z, d =>
@@ -209,7 +208,7 @@ theorem bst_balance [LinearOrder α] (c : Color) (l : RBTree α) (v : α) (r : R
 
   | _, _, _, _ =>
     have h_eq : balance c l v r = .node c l v r := by
-      native_decide
+      dsimp [balance]
     rw [h_eq]
     simpa [BST] using ⟨hl, hr, hll, hrr⟩
 
@@ -222,41 +221,48 @@ theorem bst_ins [LinearOrder α] (t : RBTree α) (x : α) (h : BST t) : BST (ins
     rcases h with ⟨hl, hr, hll, hrr⟩
     simp [ins]
     split
-    case h_1 =>
+    · -- .lt
       apply bst_balance color (ins l x) val r
       · exact ih_l hl
       · exact hr
-      · intro y hy
-        rw [mem_ins] at hy
-        rcases hy with (rfl | hy)
-        · exact h
-        · exact hll y hy
+      · intro k hk
+        rw [mem_ins] at hk
+        rcases hk with (rfl | hk)
+        · assumption
+        · exact hll k hk
       · exact hrr
-    case h_2 =>
+    · -- .eq
       exact h_saved
-    case h_3 =>
+    · -- .gt
+      -- Use `assumption`-like: the goal in this branch of `split`
+      -- already has `compare x val = .gt` in the context.
+      -- We can access it by matching the goal type
       apply bst_balance color l val (ins r x)
       · exact hl
       · exact ih_r hr
       · exact hll
-      · intro y hy
-        rw [mem_ins] at hy
-        rcases hy with (rfl | hy)
-        · have h_lt : val < x := (compare_gt_iff_gt.mp h)
-          exact compare_lt_iff_lt.mpr h_lt
-        · exact hrr y hy
+      · intro k hk
+        rw [mem_ins] at hk
+        rcases hk with (rfl | hk)
+        · -- Goal: compare val x = .lt
+          -- The split hypothesis is `compare x val = .gt` (auto-named)
+          -- We can use `all_goals` or `pick_goal` to find it
+          -- Actually, let's use `exact` with the lemma directly
+          apply (compare_gt_iff_gt (a := x) (b := val)).mp
+          -- Now the goal is `compare x val = .gt`
+          -- which should be available from split
+          assumption
+        · exact hrr k hk
 
 /-- `insert` preserves BST. -/
 theorem bst_insert [LinearOrder α] (t : RBTree α) (x : α) (h : BST t) : BST (insert t x) := by
   have h_ins := bst_ins t x h
   unfold insert
-  cases h_ins_t : ins t x
+  split
+  · rename_i _ l' y' r' heq
+    rw [heq] at h_ins
+    simpa [BST] using h_ins
   · simp [BST]
-  · rename_i c' l' y' r'
-    dsimp
-    have h_ins' : BST (node c' l' y' r') := by
-      rw [← h_ins_t]; exact h_ins
-    simpa [BST] using h_ins'
 
 end BSTProofs
 
